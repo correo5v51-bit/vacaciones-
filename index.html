@@ -11,12 +11,9 @@
     <meta name="apple-mobile-web-app-title" content="Vacaciones">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2664/2664589.png">
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2664/2664589.png">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2664/2664589.png?v=2">
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2664/2664589.png?v=2">
-    <link rel="manifest" href="manifest.json?v=2">
-
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/correo5v51-bit/vacaciones-/main/10861844.png">
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/correo5v51-bit/vacaciones-/main/10861844.png">
+    
     <link rel="manifest" href="manifest.json">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -156,10 +153,9 @@
             prevDays: 0,
             vacations: [],
             workDays: [1, 2, 3, 4, 5],
-            holidays: ["01-01 primero de enero", "12-25", "05-01", "09-16"]
+            holidays: ["01-01", "12-25", "05-01", "09-16"]
         };
 
-        // Registro del Service Worker para funcionamiento Offline
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').catch(err => console.log("SW fail", err));
@@ -190,7 +186,8 @@
         function isHoliday(date) {
             const m = (date.getMonth() + 1).toString().padStart(2, '0');
             const d = date.getDate().toString().padStart(2, '0');
-            return data.holidays.includes(`${m}-${d}`);
+            const dateStr = `${m}-${d}`;
+            return data.holidays.some(h => h.startsWith(dateStr));
         }
 
         function autoCalculateDays() {
@@ -290,7 +287,7 @@
 
         function addHoliday() {
             const input = document.getElementById('newHoliday');
-            if (/^\d{2}-\d{2}$/.test(input.value)) {
+            if (/^\d{2}-\d{2}/.test(input.value)) {
                 if(!data.holidays.includes(input.value)) data.holidays.push(input.value);
                 input.value = '';
                 saveData();
