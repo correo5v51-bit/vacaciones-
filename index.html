@@ -108,11 +108,11 @@
                 <div class="grid grid-cols-2 gap-2" id="workDaysContainer"></div>
             </section>
             <section class="mb-8">
-                <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Días Festivos (MM-DD)</h3>
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Días Festivos (MM-DD Nombre)</h3>
                 <div id="holidaysList" class="space-y-2 mb-3"></div>
-                <div class="flex gap-2">
-                    <input type="text" id="newHoliday" placeholder="Ej: 12-25" class="flex-1 bg-slate-100 p-3 rounded-xl text-sm outline-none">
-                    <button onclick="addHoliday()" class="bg-blue-600 text-white px-4 rounded-xl text-sm font-bold">Add</button>
+                <div class="flex flex-col gap-2">
+                    <input type="text" id="newHoliday" placeholder="Ej: 12-25 Navidad" class="bg-slate-100 p-3 rounded-xl text-sm outline-none">
+                    <button onclick="addHoliday()" class="bg-blue-600 text-white py-3 rounded-xl text-sm font-bold">Agregar Festivo</button>
                 </div>
             </section>
         </div>
@@ -153,7 +153,7 @@
             prevDays: 0,
             vacations: [],
             workDays: [1, 2, 3, 4, 5],
-            holidays: ["01-01", "12-25", "05-01", "09-16"]
+            holidays: ["01-01 Año Nuevo", "12-25 Navidad", "05-01 Día del Trabajo", "09-16 Día de la Independencia"]
         };
 
         if ('serviceWorker' in navigator) {
@@ -186,8 +186,8 @@
         function isHoliday(date) {
             const m = (date.getMonth() + 1).toString().padStart(2, '0');
             const d = date.getDate().toString().padStart(2, '0');
-            const dateStr = `${m}-${d}`;
-            return data.holidays.some(h => h.startsWith(dateStr));
+            const search = `${m}-${d}`;
+            return data.holidays.some(h => h.startsWith(search));
         }
 
         function autoCalculateDays() {
@@ -271,12 +271,20 @@
                 </button>
             `).join('');
 
-            document.getElementById('holidaysList').innerHTML = data.holidays.sort().map(h => `
-                <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <span class="text-sm font-semibold text-slate-600">${h}</span>
-                    <button onclick="removeHoliday('${h}')" class="text-red-400 text-[10px] font-bold uppercase">Quitar</button>
-                </div>
-            `).join('');
+            // Renderizado de lista de festivos con etiquetas
+            document.getElementById('holidaysList').innerHTML = data.holidays.sort().map(h => {
+                const [fecha, ...nombre] = h.split(' ');
+                const etiqueta = nombre.join(' ') || 'Festivo';
+                return `
+                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <div class="flex flex-col text-left">
+                            <span class="text-xs font-bold text-blue-600">${fecha}</span>
+                            <span class="text-[11px] font-medium text-slate-600 uppercase tracking-tight">${etiqueta}</span>
+                        </div>
+                        <button onclick="removeHoliday('${h}')" class="text-red-400 text-[10px] font-bold uppercase ml-2">Quitar</button>
+                    </div>
+                `;
+            }).join('');
         }
 
         function toggleWorkDay(idx) {
@@ -288,9 +296,13 @@
         function addHoliday() {
             const input = document.getElementById('newHoliday');
             if (/^\d{2}-\d{2}/.test(input.value)) {
-                if(!data.holidays.includes(input.value)) data.holidays.push(input.value);
+                if(!data.holidays.includes(input.value)) {
+                    data.holidays.push(input.value);
+                }
                 input.value = '';
                 saveData();
+            } else {
+                alert("Formato incorrecto. Usa MM-DD Nombre (Ej: 12-25 Navidad)");
             }
         }
 
