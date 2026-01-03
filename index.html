@@ -108,12 +108,15 @@
                 <div class="grid grid-cols-2 gap-2" id="workDaysContainer"></div>
             </section>
             <section class="mb-8">
-                <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Días Festivos (MM-DD Nombre)</h3>
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Días Festivos</h3>
                 <div id="holidaysList" class="space-y-2 mb-3"></div>
                 <div class="flex flex-col gap-2">
                     <input type="text" id="newHoliday" placeholder="Ej: 12-25 Navidad" class="bg-slate-100 p-3 rounded-xl text-sm outline-none">
                     <button onclick="addHoliday()" class="bg-blue-600 text-white py-3 rounded-xl text-sm font-bold">Agregar Festivo</button>
                 </div>
+            </section>
+            <section>
+                <button onclick="requestNotificationPermission()" class="w-full py-3 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold uppercase">Habilitar Notificaciones</button>
             </section>
         </div>
     </div>
@@ -156,12 +159,58 @@
             holidays: ["01-01 Año Nuevo", "12-25 Navidad", "05-01 Día del Trabajo", "09-16 Día de la Independencia"]
         };
 
-        // Registro del Service Worker para soporte Offline
+        // --- SISTEMA DE NOTIFICACIONES ---
+        function requestNotificationPermission() {
+            if ("Notification" in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification("¡Listo!", { body: "Notificaciones activadas correctamente" });
+                    }
+                });
+            }
+        }
+
+        function checkNotifications() {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+            const hoy = new Date();
+            hoy.setHours(0,0,0,0);
+            const hoyStr = hoy.toISOString().split('T')[0];
+
+            const mañana = new Date(hoy);
+            mañana.setDate(hoy.getDate() + 1);
+            const mañanaStr = mañana.toISOString().split('T')[0];
+
+            data.vacations.forEach(v => {
+                // Mañana inician
+                if (v.start === mañanaStr) {
+                    new Notification("Vacaciones Pro", {
+                        body: `¡Mañana inician tus vacaciones: ${v.desc}! 🌴`,
+                        icon: 'https://raw.githubusercontent.com/correo5v51-bit/vacaciones-/main/10861844.png'
+                    });
+                }
+                // Hoy terminan
+                if (v.end === hoyStr) {
+                    new Notification("Vacaciones Pro", {
+                        body: "Hoy es tu último día de vacaciones. ¡Disfrútalo! 🏖️",
+                        icon: 'https://raw.githubusercontent.com/correo5v51-bit/vacaciones-/main/10861844.png'
+                    });
+                    
+                    // Aviso de regreso (mañana)
+                    setTimeout(() => {
+                        new Notification("Recordatorio", {
+                            body: "Mañana regresas a tus labores. ¡Te esperamos con energía!",
+                            icon: 'https://raw.githubusercontent.com/correo5v51-bit/vacaciones-/main/10861844.png'
+                        });
+                    }, 5000);
+                }
+            });
+        }
+        // ---------------------------------
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log("SW registrado con éxito", reg.scope))
-                .catch(err => console.log("Fallo al registrar SW", err));
+                navigator.serviceWorker.register('sw.js').catch(err => console.log("SW fail", err));
             });
         }
 
@@ -331,7 +380,10 @@
             if(confirm('¿Borrar registro?')) { data.vacations = data.vacations.filter(v => v.id !== id); saveData(); }
         }
 
-        window.onload = render;
+        window.onload = () => {
+            render();
+            checkNotifications(); // Revisa fechas al abrir la app
+        };
     </script>
 </body>
 </html>
