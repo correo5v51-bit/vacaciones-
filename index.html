@@ -103,27 +103,16 @@
                 <h2 class="text-xl font-bold text-slate-800">Ajustes</h2>
                 <button onclick="toggleSettings(false)" class="text-3xl text-slate-400">&times;</button>
             </div>
-            
-            <section class="mb-8">
-                <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Notificaciones</h3>
-                <div id="notifStatus" class="mb-3 p-3 rounded-xl border text-center">
-                    </div>
-                <button id="btnNotif" onclick="requestNotificationPermission()" class="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase shadow-md">
-                    Activar Avisos
-                </button>
-            </section>
-
             <section class="mb-8">
                 <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Días Laborales</h3>
                 <div class="grid grid-cols-2 gap-2" id="workDaysContainer"></div>
             </section>
-
             <section class="mb-8">
-                <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Días Festivos</h3>
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Días Festivos (MM-DD Nombre)</h3>
                 <div id="holidaysList" class="space-y-2 mb-3"></div>
                 <div class="flex flex-col gap-2">
                     <input type="text" id="newHoliday" placeholder="Ej: 12-25 Navidad" class="bg-slate-100 p-3 rounded-xl text-sm outline-none">
-                    <button onclick="addHoliday()" class="bg-slate-200 text-slate-700 py-3 rounded-xl text-sm font-bold">Agregar</button>
+                    <button onclick="addHoliday()" class="bg-blue-600 text-white py-3 rounded-xl text-sm font-bold">Agregar Festivo</button>
                 </div>
             </section>
         </div>
@@ -133,7 +122,7 @@
         <div class="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
             <h2 class="text-xl font-bold text-slate-800 mb-4">Registrar Periodo</h2>
             <div class="space-y-4">
-                <input type="text" id="descInput" placeholder="Motivo (Ej: Viaje a la playa)" class="w-full p-4 rounded-xl bg-slate-50 outline-none">
+                <input type="text" id="descInput" placeholder="Motivo" class="w-full p-4 rounded-xl bg-slate-50 outline-none">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Inicio</label>
@@ -167,77 +156,12 @@
             holidays: ["01-01 Año Nuevo", "12-25 Navidad", "05-01 Día del Trabajo", "09-16 Día de la Independencia"]
         };
 
-        // --- LÓGICA DE NOTIFICACIONES ---
-        function updateNotifUI() {
-            const btn = document.getElementById('btnNotif');
-            const statusDiv = document.getElementById('notifStatus');
-            
-            if (!("Notification" in window)) {
-                statusDiv.innerHTML = '<p class="text-red-500 text-xs font-bold">No compatible con este navegador</p>';
-                btn.style.display = 'none';
-                return;
-            }
-
-            if (Notification.permission === "granted") {
-                statusDiv.className = "mb-3 p-3 rounded-xl border border-green-100 bg-green-50 text-center";
-                statusDiv.innerHTML = '<p class="text-green-600 text-xs font-bold">● ACTIVADAS</p>';
-                btn.innerText = "Enviar Prueba";
-                btn.className = "w-full py-3 bg-green-600 text-white rounded-xl text-xs font-bold uppercase";
-            } else if (Notification.permission === "denied") {
-                statusDiv.className = "mb-3 p-3 rounded-xl border border-red-100 bg-red-50 text-center";
-                statusDiv.innerHTML = '<p class="text-red-600 text-xs font-bold">● BLOQUEADAS</p>';
-                btn.innerText = "Desbloquear en Ajustes 🔒";
-                btn.disabled = true;
-                btn.className = "w-full py-3 bg-slate-200 text-slate-400 rounded-xl text-xs font-bold uppercase";
-            } else {
-                statusDiv.className = "mb-3 p-3 rounded-xl border border-amber-100 bg-amber-50 text-center";
-                statusDiv.innerHTML = '<p class="text-amber-600 text-xs font-bold">● PENDIENTES</p>';
-            }
-        }
-
-        async function requestNotificationPermission() {
-            if (Notification.permission === "granted") {
-                new Notification("Vacaciones Pro", { body: "Las notificaciones están funcionando correctamente." });
-                return;
-            }
-            const permission = await Notification.requestPermission();
-            updateNotifUI();
-            if (permission === "granted") {
-                // Intentar registrar sincronización periódica si es PWA
-                if ('serviceWorker' in navigator && 'periodicSync' in navigator) {
-                    const registration = await navigator.serviceWorker.ready;
-                    try {
-                        await registration.periodicSync.register('check-vacations', { minInterval: 24 * 60 * 60 * 1000 });
-                    } catch (e) { console.log("Periodic Sync no soportado aún"); }
-                }
-            }
-        }
-
-        function checkVacationNotifications() {
-            if (Notification.permission !== "granted") return;
-
-            const hoy = new Date();
-            hoy.setHours(0,0,0,0);
-            const hoyStr = hoy.toISOString().split('T')[0];
-            
-            const mañana = new Date(hoy);
-            mañana.setDate(hoy.getDate() + 1);
-            const mañanaStr = mañana.toISOString().split('T')[0];
-
-            data.vacations.forEach(v => {
-                if (v.start === mañanaStr) {
-                    new Notification("¡Mañana inician!", { body: `Tus vacaciones "${v.desc}" comienzan mañana.` });
-                }
-                if (v.end === hoyStr) {
-                    new Notification("Último día", { body: `Hoy termina tu periodo de "${v.desc}". ¡Mañana regresas!` });
-                }
-            });
-        }
-
-        // --- FUNCIONES CORE ---
+        // Registro del Service Worker para soporte Offline
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log("SW fail", err));
+                navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log("SW registrado con éxito", reg.scope))
+                .catch(err => console.log("Fallo al registrar SW", err));
             });
         }
 
@@ -250,7 +174,6 @@
 
         function toggleSettings(show) {
             document.getElementById('settingsDrawer').classList.toggle('open', show);
-            if(show) updateNotifUI();
         }
 
         function toggleModal(show) {
@@ -353,10 +276,14 @@
 
             document.getElementById('holidaysList').innerHTML = data.holidays.sort().map(h => {
                 const [fecha, ...nombre] = h.split(' ');
+                const etiqueta = nombre.join(' ') || 'Festivo';
                 return `
-                    <div class="flex justify-between items-center bg-slate-50 p-2 rounded-xl border border-slate-100">
-                        <span class="text-[10px] font-bold text-slate-600 uppercase">${h}</span>
-                        <button onclick="removeHoliday('${h}')" class="text-red-400 text-[10px] font-bold">×</button>
+                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <div class="flex flex-col text-left">
+                            <span class="text-xs font-bold text-blue-600">${fecha}</span>
+                            <span class="text-[11px] font-medium text-slate-600 uppercase tracking-tight">${etiqueta}</span>
+                        </div>
+                        <button onclick="removeHoliday('${h}')" class="text-red-400 text-[10px] font-bold uppercase ml-2">Quitar</button>
                     </div>
                 `;
             }).join('');
@@ -370,10 +297,14 @@
 
         function addHoliday() {
             const input = document.getElementById('newHoliday');
-            if (input.value) {
-                data.holidays.push(input.value);
+            if (/^\d{2}-\d{2}/.test(input.value)) {
+                if(!data.holidays.includes(input.value)) {
+                    data.holidays.push(input.value);
+                }
                 input.value = '';
                 saveData();
+            } else {
+                alert("Formato incorrecto. Usa MM-DD Nombre (Ej: 12-25 Navidad)");
             }
         }
 
@@ -392,7 +323,6 @@
                 saveData();
                 toggleModal(false);
                 document.getElementById('descInput').value = '';
-                checkVacationNotifications();
             }
         }
 
@@ -401,11 +331,7 @@
             if(confirm('¿Borrar registro?')) { data.vacations = data.vacations.filter(v => v.id !== id); saveData(); }
         }
 
-        window.onload = () => {
-            render();
-            checkVacationNotifications();
-            updateNotifUI();
-        };
+        window.onload = render;
     </script>
 </body>
 </html>
